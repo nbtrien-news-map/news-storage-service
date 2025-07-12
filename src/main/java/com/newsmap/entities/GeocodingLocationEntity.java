@@ -1,16 +1,18 @@
 package com.newsmap.entities;
 
+import com.newsmap.entities.converters.BoundingBoxConverter;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import org.hibernate.annotations.ColumnTransformer;
+
+import java.util.List;
 
 @Getter
 @Setter
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Table(name = "geocoding_location")
 public class GeocodingLocationEntity extends BaseEntity {
     @Id
@@ -42,6 +44,8 @@ public class GeocodingLocationEntity extends BaseEntity {
     @Column(name = "display_name")
     private String displayName;
 
+    @Convert(converter = BoundingBoxConverter.class)
     @Column(name = "bounding_box", columnDefinition = "jsonb")
-    private String boundingBox;
+    @ColumnTransformer(write = "?::jsonb")
+    private List<Double> boundingBox;
 }

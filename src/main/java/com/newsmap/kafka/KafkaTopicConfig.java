@@ -22,6 +22,9 @@ public class KafkaTopicConfig {
     @Value(value = "${kafka.extract.news.location.topic.name}")
     private String extractNewsLocationTopicName;
 
+    @Value(value = "${kafka.sync.news.location.topic.name}")
+    private String syncNewsLocationTopicName;
+
     @Bean
     public KafkaAdmin kafkaAdmin() {
         Map<String, Object> configs = new HashMap<>();
@@ -37,5 +40,10 @@ public class KafkaTopicConfig {
     @Bean
     public NewTopic extractNewsLocationTopicName() {
         return new NewTopic(extractNewsLocationTopicName, 1, (short) 1);
+    }
+
+    @Bean
+    public NewTopic syncNewsLocationTopicName() {
+        return new NewTopic(syncNewsLocationTopicName, 1, (short) 1);
     }
 }

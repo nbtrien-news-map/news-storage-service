@@ -1,6 +1,6 @@
 package com.newsmap.kafka;
 
-import com.newsmap.events.SyncRawNewsDataEvent;
+import com.newsmap.events.SyncNewsLocationEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,15 +15,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
-public class SyncRawNewsDataConsumerConfig {
+public class SyncNewsLocationConsumerConfig {
     @Value("${kafka.bootstrapAddress}")
     private String bootstrapAddress;
     @Value("${kafka.group-id}")
     private String groupId;
 
     @Bean
-    public ConsumerFactory<String, SyncRawNewsDataEvent> syncRawNewsDataConsumerFactory() {
-        JsonDeserializer<SyncRawNewsDataEvent> deserializer = new JsonDeserializer<>(SyncRawNewsDataEvent.class);
+    public ConsumerFactory<String, SyncNewsLocationEvent> syncNewsLocationConsumerFactory() {
+        JsonDeserializer<SyncNewsLocationEvent> deserializer = new JsonDeserializer<>(SyncNewsLocationEvent.class);
         deserializer.addTrustedPackages("*");
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
@@ -35,10 +35,10 @@ public class SyncRawNewsDataConsumerConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, SyncRawNewsDataEvent> syncRawNewsDataKafkaListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, SyncRawNewsDataEvent> factory =
+    public ConcurrentKafkaListenerContainerFactory<String, SyncNewsLocationEvent> syncNewsLocationKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, SyncNewsLocationEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(syncRawNewsDataConsumerFactory());
+        factory.setConsumerFactory(syncNewsLocationConsumerFactory());
         return factory;
     }
 }

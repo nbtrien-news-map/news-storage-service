@@ -6,7 +6,6 @@ import com.newsmap.events.SyncRawNewsDataEvent;
 import com.newsmap.exceptions.MapNewsItemExistException;
 import com.newsmap.producers.ExtractNewsLocationProducer;
 import com.newsmap.services.MapNewsItemService;
-import com.newsmap.services.impl.mapnewsitem.MapNewsItemValidatorService;
 import com.newsmap.utils.DateTimeUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @RequiredArgsConstructor
 public class SyncRawNewsDataConsumer {
-    private final MapNewsItemValidatorService mapNewsItemValidatorService;
     private final ExtractNewsLocationProducer extractNewsLocationProducer;
     private final MapNewsItemService mapNewsItemService;
 
