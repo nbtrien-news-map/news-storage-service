@@ -1,9 +1,11 @@
 package com.newsmap.services.impl;
 
+import com.newsmap.constants.ErrorMessageConstants;
 import com.newsmap.entities.GeocodingLocationEntity;
 import com.newsmap.entities.MapNewsItemEntity;
 import com.newsmap.entities.NewsSourceEntity;
 import com.newsmap.entities.NewsTrackedAreaEntity;
+import com.newsmap.enums.NewsSyncStatusEnum;
 import com.newsmap.events.GeocodingLocationEvent;
 import com.newsmap.events.SyncNewsLocationEvent;
 import com.newsmap.exceptions.MapNewsItemExistException;
@@ -12,13 +14,13 @@ import com.newsmap.repositories.GeocodingLocationRepository;
 import com.newsmap.repositories.MapNewsItemRepository;
 import com.newsmap.repositories.NewsSourceRepository;
 import com.newsmap.repositories.NewsTrackedAreaRepository;
+import com.newsmap.services.GeocodingLocationService;
 import com.newsmap.services.MapNewsItemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -30,33 +32,47 @@ public class MapNewsItemServiceImpl implements MapNewsItemService {
     private final NewsSourceRepository newsSourceRepository;
     private final GeocodingLocationRepository geocodingLocationRepository;
     private final NewsTrackedAreaRepository newsTrackedAreaRepository;
+    private final GeocodingLocationService geocodingLocationService;
+    private final MapNewsItemUpdaterService mapNewsItemUpdaterService;
 
     @Override
     @Transactional
     public MapNewsItemEntity saveRawNewsItem(MapNewsItemEntity rawEntity, Integer providerId) {
         validateAndMapRawNewsItem(rawEntity, providerId);
+        rawEntity.setSyncStatus(NewsSyncStatusEnum.SYNCED_RAW_DATA.getValue());
         return mapNewsItemRepository.save(rawEntity);
     }
 
     @Override
     @Transactional
     public void saveNewsLocation(SyncNewsLocationEvent syncNewsLocationEvent) {
+        Long mapNewsItemId = syncNewsLocationEvent.getMapNewsItemId();
         MapNewsItemEntity mapNewsItemEntity =
-                mapNewsItemRepository.findById(syncNewsLocationEvent.getMapNewsItemId())
-                        .orElseThrow(() -> new ResourceNotFoundException("MapNewsItemEntity not found"));
+                mapNewsItemRepository.findByMapNewsItemIdAndSyncStatus(mapNewsItemId,
+                                                                       NewsSyncStatusEnum.SYNCED_RAW_DATA.getValue())
+                        .orElseThrow(() -> new ResourceNotFoundException(String.format(ErrorMessageConstants.MAP_NEWS_ITEM_NOT_FOUND,
+                                                                                       mapNewsItemId)));
 
-        if (Objects.isNull(syncNewsLocationEvent.getGeocodingLocation())) {
-            mapNewsItemRepository.delete(mapNewsItemEntity);
-            throw new ResourceNotFoundException("GeocodingLocationEvent not found");
+        try {
+            if (Objects.isNull(syncNewsLocationEvent.getGeocodingLocation())) {
+                throw new ResourceNotFoundException("GeocodingLocationEvent not found");
+            }
+
+            if (Objects.nonNull(mapNewsItemEntity.getGeocodingLocation())) {
+                throw new MapNewsItemExistException();
+            }
+
+            mapNewsTrackedAreas(mapNewsItemEntity, syncNewsLocationEvent.getGeocodingLocation());
+            mapNewsItemEntity.setAddress(syncNewsLocationEvent.getAddress());
+            mapNewsItemEntity.setSyncStatus(NewsSyncStatusEnum.SYNCED_GEOCODING_LOCATION.getValue());
+            mapNewsItemRepository.save(mapNewsItemEntity);
+
+            log.info("SAVED News Location: {}", mapNewsItemEntity);
+        } catch (Exception e) {
+            log.error("Sync News Item {} fail with error : {}", mapNewsItemId, e.getMessage());
+            mapNewsItemUpdaterService.updateSyncLocationFailureStatus(mapNewsItemEntity);
+            throw e;
         }
-
-        if (Objects.nonNull(mapNewsItemEntity.getGeocodingLocation())) {
-            throw new MapNewsItemExistException();
-        }
-
-        mapNewsTrackedAreas(mapNewsItemEntity, syncNewsLocationEvent.getGeocodingLocation());
-        log.info("SAVED News Location: {}", mapNewsItemEntity);
-        mapNewsItemRepository.save(mapNewsItemEntity);
     }
 
     private void validateAndMapRawNewsItem(MapNewsItemEntity rawEntity, Integer providerId) {
@@ -68,23 +84,22 @@ public class MapNewsItemServiceImpl implements MapNewsItemService {
                 .orElseThrow(RuntimeException::new);
         rawEntity.setNewsSource(newsSourceEntity);
         rawEntity.setProvider(newsSourceEntity.getNewsProvider().getName());
+        rawEntity.setCategory(newsSourceEntity.getCategory());
     }
 
     private void mapNewsTrackedAreas(MapNewsItemEntity mapNewsItemEntity, GeocodingLocationEvent locationEvent) {
-        GeocodingLocationEntity geocodingLocationEntity =
+        GeocodingLocationEntity geocodingLocation =
                 geocodingLocationRepository.findByPlaceId(locationEvent.getPlaceId())
                         .orElseGet(() -> {
-                            GeocodingLocationEntity newLocation = constructGeocodingLocationEntity(locationEvent);
+                            GeocodingLocationEntity newLocation =
+                                    geocodingLocationService.constructEntityFromEvent(locationEvent);
                             return geocodingLocationRepository.save(newLocation);
                         });
-        mapNewsItemEntity.setGeocodingLocation(geocodingLocationEntity);
         Set<NewsTrackedAreaEntity> newsTrackedAreaEntities =
                 newsTrackedAreaRepository.findAllByNewsSourceId(mapNewsItemEntity.getNewsSource().getNewsSourceId());
         for (NewsTrackedAreaEntity trackedAreaEntity : newsTrackedAreaEntities) {
-            List<Double> trackedLocationBoundingBox = trackedAreaEntity.getGeocodingLocationEntity().getBoundingBox();
-            if (isNewsLocationWithinTrackedBoundingBox(geocodingLocationEntity.getLatitude(),
-                                                       geocodingLocationEntity.getLongitude(),
-                                                       trackedLocationBoundingBox)) {
+            if (geocodingLocationService.isLocationInsideLocation(geocodingLocation,
+                                                                  trackedAreaEntity.getGeocodingLocation())) {
                 mapNewsItemEntity.getTrackedAreas().add(trackedAreaEntity);
             }
         }
@@ -92,28 +107,6 @@ public class MapNewsItemServiceImpl implements MapNewsItemService {
         if (mapNewsItemEntity.getTrackedAreas().isEmpty()) {
             throw new ResourceNotFoundException("Tracked Areas not found for location");
         }
-    }
-
-    public boolean isNewsLocationWithinTrackedBoundingBox(Double latitude, Double longitude,
-                                                          List<Double> trackedLocationBoundingBox) {
-        return latitude >= trackedLocationBoundingBox.get(0)
-                && latitude <= trackedLocationBoundingBox.get(1)
-                && longitude >= trackedLocationBoundingBox.get(2)
-                && longitude <= trackedLocationBoundingBox.get(3);
-    }
-
-    private GeocodingLocationEntity constructGeocodingLocationEntity(GeocodingLocationEvent locationEvent) {
-        GeocodingLocationEntity geocodingLocationEntity = new GeocodingLocationEntity();
-        geocodingLocationEntity.setAddressType(locationEvent.getAddressType());
-        geocodingLocationEntity.setLatitude(locationEvent.getLatitude());
-        geocodingLocationEntity.setName(locationEvent.getName());
-        geocodingLocationEntity.setImportance(locationEvent.getImportance());
-        geocodingLocationEntity.setLongitude(locationEvent.getLongitude());
-        geocodingLocationEntity.setDisplayName(locationEvent.getDisplayName());
-        geocodingLocationEntity.setImportance(locationEvent.getImportance());
-        geocodingLocationEntity.setPlaceId(locationEvent.getPlaceId());
-        geocodingLocationEntity.setPlaceRank(locationEvent.getPlaceRank());
-        geocodingLocationEntity.setBoundingBox(locationEvent.getBoundingBox());
-        return geocodingLocationEntity;
+        mapNewsItemEntity.setGeocodingLocation(geocodingLocation);
     }
 }

@@ -29,7 +29,7 @@ public class NewsTrackedAreaEntity extends BaseEntity {
 
     @JoinColumn(name = "geocoding_location_id")
     @ManyToOne(fetch = FetchType.EAGER)
-    private GeocodingLocationEntity geocodingLocationEntity;
+    private GeocodingLocationEntity geocodingLocation;
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinTable(name = "news_source_tracked_area",

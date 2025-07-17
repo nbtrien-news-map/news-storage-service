@@ -10,9 +10,8 @@ import org.springframework.stereotype.Component;
 public class NewsCrawlScheduler {
     private final NewsCrawlDispatcherService newsCrawlDispatcherService;
 
-//    @Scheduled(fixedRate = 10000)
-    public void syncData() {
-        System.out.println("newsCrawlDispatcherService");
+//    @Scheduled(fixedRate = 300000)
+    public void execute() {
         newsCrawlDispatcherService.executeService();
     }
 }

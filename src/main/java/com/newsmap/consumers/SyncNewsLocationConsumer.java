@@ -1,8 +1,6 @@
 package com.newsmap.consumers;
 
 import com.newsmap.events.SyncNewsLocationEvent;
-import com.newsmap.exceptions.MapNewsItemExistException;
-import com.newsmap.exceptions.ResourceNotFoundException;
 import com.newsmap.services.MapNewsItemService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,12 +18,8 @@ public class SyncNewsLocationConsumer {
     public void consume(SyncNewsLocationEvent event) {
         try {
             mapNewsItemService.saveNewsLocation(event);
-        } catch (ResourceNotFoundException e) {
-            log.error(e.getMessage());
-        } catch (MapNewsItemExistException e) {
-            log.error("News Item Exist, Skipping consume");
-        } catch (RuntimeException e) {
-            log.error("Error SyncNewsLocationEvent", e);
+        } catch (Exception e) {
+            log.error("Error SyncNewsLocationEvent : {}", e.getMessage());
         }
     }
 }

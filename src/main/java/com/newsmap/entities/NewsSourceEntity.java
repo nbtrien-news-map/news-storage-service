@@ -21,10 +21,6 @@ public class NewsSourceEntity extends BaseEntity {
     @Column(name = "news_source_id")
     private Integer newsSourceId;
 
-    @ManyToOne
-    @JoinColumn(name = "news_provider_id", referencedColumnName = "news_provider_id")
-    private NewsProviderEntity newsProvider;
-
     @Column(name = "source_url", length = 500, nullable = false)
     private String sourceUrl;
 
@@ -34,11 +30,13 @@ public class NewsSourceEntity extends BaseEntity {
     @Column(name = "is_active")
     private Boolean isActive;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinTable(name = "news_source_category",
-            joinColumns = @JoinColumn(name = "news_source_id"),
-            inverseJoinColumns = @JoinColumn(name = "news_category_id"))
-    private Set<NewsCategoryEntity> categories = new HashSet<>();
+    @ManyToOne
+    @JoinColumn(name = "news_provider_id", referencedColumnName = "news_provider_id")
+    private NewsProviderEntity newsProvider;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id", referencedColumnName = "news_category_id")
+    private NewsCategoryEntity category;
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinTable(name = "news_source_tracked_area",

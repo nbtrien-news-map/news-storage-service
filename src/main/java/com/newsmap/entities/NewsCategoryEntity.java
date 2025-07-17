@@ -26,16 +26,4 @@ public class NewsCategoryEntity extends BaseEntity {
 
     @Column(name = "description")
     private String description;
-
-    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinTable(name = "news_source_category",
-            joinColumns = @JoinColumn(name = "news_category_id"),
-            inverseJoinColumns = @JoinColumn(name = "news_source_id"))
-    private Set<NewsSourceEntity> newsSources = new HashSet<>();
-
-    @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinTable(name = "map_news_item_category",
-            joinColumns = @JoinColumn(name = "news_category_id"),
-            inverseJoinColumns = @JoinColumn(name = "map_news_item_id"))
-    private Set<MapNewsItemEntity> mapNewsItems = new HashSet<>();
 }

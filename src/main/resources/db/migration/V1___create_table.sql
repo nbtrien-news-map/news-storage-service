@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS geocoding_location (
 CREATE TABLE IF NOT EXISTS news_tracked_area (
 	news_tracked_area_id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255),
+    name_en VARCHAR(255),
+    short_code VARCHAR(10),
+    short_name VARCHAR(255),
     display_name VARCHAR(255),
 	geocoding_location_id BIGINT,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -46,6 +49,7 @@ CREATE TABLE IF NOT EXISTS news_category (
 CREATE TABLE IF NOT EXISTS news_source (
     news_source_id SERIAL PRIMARY KEY,
     news_provider_id INTEGER,
+    category_id INTEGER,
     source_url VARCHAR(500) NOT NULL,
     frequency INTEGER,
     is_active BOOLEAN DEFAULT TRUE,
@@ -56,29 +60,17 @@ CREATE TABLE IF NOT EXISTS news_source (
 CREATE TABLE IF NOT EXISTS map_news_item (
     map_news_item_id BIGSERIAL PRIMARY KEY,
     news_source_id INTEGER,
+    category_id INTEGER,
 	provider VARCHAR(100) NOT NULL,
 	geocoding_location_id BIGINT,
     title VARCHAR(255),
+    sync_status SMALLINT NOT NULL DEFAULT 1,
     description TEXT,
 	source_url VARCHAR(500) NOT NULL,
     published_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB
-);
-
-CREATE TABLE IF NOT EXISTS news_source_category (
-    news_source_id INTEGER,
-    news_category_id INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (news_source_id, news_category_id)
-);
-
-CREATE TABLE IF NOT EXISTS map_news_item_category (
-    map_news_item_id BIGINT,
-    news_category_id INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (map_news_item_id, news_category_id)
 );
 
 CREATE TABLE IF NOT EXISTS news_source_tracked_area (
@@ -95,9 +87,6 @@ CREATE TABLE IF NOT EXISTS map_news_item_tracked_area (
     PRIMARY KEY (map_news_item_id, news_tracked_area_id)
 );
 
-
-
-
 ---- Create Foreign Key Constraints
 ALTER TABLE news_tracked_area
 ADD CONSTRAINT fk_news_tracked_area_geocoding_location
@@ -109,6 +98,11 @@ ADD CONSTRAINT fk_news_source_provider
 FOREIGN KEY (news_provider_id)
 REFERENCES news_provider(news_provider_id) ON DELETE SET NULL;
 
+ALTER TABLE news_source
+ADD CONSTRAINT fk_news_source_category
+FOREIGN KEY (category_id)
+REFERENCES news_category(news_category_id) ON DELETE SET NULL;
+
 ALTER TABLE map_news_item
 ADD CONSTRAINT fk_map_news_item_source
 FOREIGN KEY (news_source_id)
@@ -119,25 +113,10 @@ ADD CONSTRAINT fk_map_news_item_location
 FOREIGN KEY (geocoding_location_id)
 REFERENCES geocoding_location(geocoding_location_id) ON DELETE SET NULL;
 
-ALTER TABLE news_source_category
-ADD CONSTRAINT fk_nsc_source
-FOREIGN KEY (news_source_id)
-REFERENCES news_source(news_source_id) ON DELETE CASCADE;
-
-ALTER TABLE news_source_category
-ADD CONSTRAINT fk_nsc_category
-FOREIGN KEY (news_category_id)
-REFERENCES news_category(news_category_id) ON DELETE CASCADE;
-
-ALTER TABLE map_news_item_category
-ADD CONSTRAINT fk_mnic_news
-FOREIGN KEY (map_news_item_id)
-REFERENCES map_news_item(map_news_item_id) ON DELETE CASCADE;
-
-ALTER TABLE map_news_item_category
-ADD CONSTRAINT fk_mnic_category
-FOREIGN KEY (news_category_id)
-REFERENCES news_category(news_category_id) ON DELETE CASCADE;
+ALTER TABLE map_news_item
+ADD CONSTRAINT fk_map_news_item_category
+FOREIGN KEY (category_id)
+REFERENCES news_category(news_category_id) ON DELETE SET NULL;
 
 ALTER TABLE news_source_tracked_area
 ADD CONSTRAINT fk_nsta_source
