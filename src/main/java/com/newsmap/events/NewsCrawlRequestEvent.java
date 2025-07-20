@@ -2,6 +2,9 @@ package com.newsmap.events;
 
 import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Getter
 @Setter
 @Builder
@@ -14,4 +17,5 @@ public class NewsCrawlRequestEvent {
     private Integer providerCode;
     private String providerName;
     private String sourceType;
+    private Set<TrackedAreaEvent> trackedAreas = new HashSet<>();
 }

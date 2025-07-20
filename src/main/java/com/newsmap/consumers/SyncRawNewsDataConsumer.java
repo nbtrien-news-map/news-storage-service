@@ -35,6 +35,7 @@ public class SyncRawNewsDataConsumer {
             extractNewsLocationEvent.setMapNewsItemId(newsItemEntity.getMapNewsItemId());
             extractNewsLocationEvent.setTitle(newsItemEntity.getTitle());
             extractNewsLocationEvent.setDescription(newsItemEntity.getDescription());
+            extractNewsLocationEvent.setTrackedAreas(event.getTrackedAreas());
 
             extractNewsLocationProducer.publish(extractNewsLocationEvent);
             log.info("extractNewsLocation publish: {}", extractNewsLocationEvent);

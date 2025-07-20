@@ -11,7 +11,6 @@ import java.util.List;
 @AllArgsConstructor
 @ToString
 public class GeocodingLocationEvent {
-    private Long placeId;
     private String name;
     private Double latitude;
     private Double longitude;
@@ -20,4 +19,8 @@ public class GeocodingLocationEvent {
     private String displayName;
     private String addressType;
     private Double importance;
+    private String osmType;
+    private Long osmId;
+    private String osmClass;
+    private String osmTypeName;
 }

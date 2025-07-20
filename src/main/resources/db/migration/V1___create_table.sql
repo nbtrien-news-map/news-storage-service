@@ -1,13 +1,17 @@
 ---- Create Table
 CREATE TABLE IF NOT EXISTS geocoding_location (
 	geocoding_location_id BIGSERIAL PRIMARY KEY,
-    place_id BIGINT UNIQUE,
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
+	osm_type VARCHAR(50) NOT NULL,
+	osm_id BIGINT NOT NULL,
+	admin_level SMALLINT,
+	osm_class VARCHAR(50),
+	osm_type_name VARCHAR(50),
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
     place_rank INTEGER,
     importance DOUBLE PRECISION,
     address_type VARCHAR(100),
-    name VARCHAR(255),
+    name VARCHAR(255) NOT NULL,
     display_name VARCHAR(255),
     bounding_box JSONB,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -21,7 +25,17 @@ CREATE TABLE IF NOT EXISTS news_tracked_area (
     short_code VARCHAR(10),
     short_name VARCHAR(255),
     display_name VARCHAR(255),
-	geocoding_location_id BIGINT,
+	osm_type VARCHAR(50) NOT NULL,
+	osm_id BIGINT NOT NULL,
+	admin_level SMALLINT,
+	osm_class VARCHAR(50),
+	osm_type_name VARCHAR(50),
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    place_rank INTEGER,
+    importance DOUBLE PRECISION,
+    address_type VARCHAR(100),
+    bounding_box JSONB,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -30,9 +44,9 @@ CREATE TABLE IF NOT EXISTS news_provider (
     news_provider_id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     domain VARCHAR(255) NOT NULL,
-    source_type VARCHAR(50) DEFAULT 'rss',
+    source_type VARCHAR(50),
+	code INT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    name INTEGER NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -64,13 +78,13 @@ CREATE TABLE IF NOT EXISTS map_news_item (
 	provider VARCHAR(100) NOT NULL,
 	geocoding_location_id BIGINT,
     title VARCHAR(255),
+	address VARCHAR(255),
     sync_status SMALLINT NOT NULL DEFAULT 1,
     description TEXT,
 	source_url VARCHAR(500) NOT NULL,
     published_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    metadata JSONB
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS news_source_tracked_area (
@@ -87,12 +101,11 @@ CREATE TABLE IF NOT EXISTS map_news_item_tracked_area (
     PRIMARY KEY (map_news_item_id, news_tracked_area_id)
 );
 
----- Create Foreign Key Constraints
-ALTER TABLE news_tracked_area
-ADD CONSTRAINT fk_news_tracked_area_geocoding_location
-FOREIGN KEY (geocoding_location_id)
-REFERENCES geocoding_location(geocoding_location_id);
+---- Create UNIQUE Constraints
+ALTER TABLE geocoding_location
+ADD CONSTRAINT unique_osm_type_id UNIQUE (osm_type, osm_id);
 
+---- Create Foreign Key Constraints
 ALTER TABLE news_source
 ADD CONSTRAINT fk_news_source_provider
 FOREIGN KEY (news_provider_id)
@@ -139,21 +152,16 @@ FOREIGN KEY (news_tracked_area_id)
 REFERENCES news_tracked_area(news_tracked_area_id) ON DELETE CASCADE;
 
 
-
 ---- Create Index
 -- geocoding_location
-CREATE INDEX idx_geocoding_location_place_id ON geocoding_location(place_id);
 CREATE INDEX idx_geocoding_location_lat_lon ON geocoding_location(latitude, longitude);
 CREATE INDEX idx_geocoding_location_name ON geocoding_location(name);
 CREATE INDEX idx_geocoding_location_display_name ON geocoding_location(display_name);
+CREATE INDEX idx_geocoding_location_osm_type_id ON geocoding_location(osm_type, osm_id);
 
 -- news_tracked_area
-CREATE INDEX idx_news_tracked_area_name ON news_tracked_area(name);
-CREATE INDEX idx_news_tracked_area_location_id ON news_tracked_area(geocoding_location_id);
-
--- news_provider
-CREATE INDEX idx_news_provider_domain ON news_provider(domain);
-CREATE INDEX idx_news_provider_name ON news_provider(name);
+CREATE INDEX idx_news_tracked_area_lat_lon ON geocoding_location(latitude, longitude);
+CREATE INDEX idx_news_tracked_area_osm_type_id ON geocoding_location(osm_type, osm_id);
 
 -- news_category
 CREATE INDEX idx_news_category_name ON news_category(name);
@@ -164,17 +172,12 @@ CREATE INDEX idx_news_source_url ON news_source(source_url);
 
 -- map_news_item
 CREATE INDEX idx_map_news_item_source_id ON map_news_item(news_source_id);
+CREATE INDEX idx_map_news_item_category_id ON map_news_item(category_id);
 CREATE INDEX idx_map_news_item_location_id ON map_news_item(geocoding_location_id);
 CREATE INDEX idx_map_news_item_published_at ON map_news_item(published_at);
 CREATE INDEX idx_map_news_item_provider ON map_news_item(provider);
 
 -- join tables
-CREATE INDEX idx_nsc_source ON news_source_category(news_source_id);
-CREATE INDEX idx_nsc_category ON news_source_category(news_category_id);
-
-CREATE INDEX idx_mnic_news_item_id ON map_news_item_category(map_news_item_id);
-CREATE INDEX idx_mnic_category_id ON map_news_item_category(news_category_id);
-
 CREATE INDEX idx_nsta_source ON news_source_tracked_area(news_source_id);
 CREATE INDEX idx_nsta_area ON news_source_tracked_area(news_tracked_area_id);
 

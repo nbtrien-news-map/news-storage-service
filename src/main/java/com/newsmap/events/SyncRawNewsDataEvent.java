@@ -2,6 +2,9 @@ package com.newsmap.events;
 
 import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Getter
 @Setter
 @Builder
@@ -14,4 +17,5 @@ public class SyncRawNewsDataEvent {
     private String description;
     private String link;
     private String publishedAt;
+    private Set<TrackedAreaEvent> trackedAreas = new HashSet<>();
 }

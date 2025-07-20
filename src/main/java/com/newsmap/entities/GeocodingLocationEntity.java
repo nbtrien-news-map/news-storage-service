@@ -20,14 +20,26 @@ public class GeocodingLocationEntity extends BaseEntity {
     @Column(name = "geocoding_location_id")
     private Long geocodingLocationId;
 
-    @Column(name = "place_id", unique = true)
-    private Long placeId;
+    @Column(name = "osm_type", nullable = false)
+    private String osmType;
 
-    @Column(name = "latitude")
+    @Column(name = "osm_id", nullable = false)
+    private Long osmId;
+
+    @Column(name = "latitude", nullable = false)
     private Double latitude;
 
-    @Column(name = "longitude")
+    @Column(name = "admin_level")
+    private Short adminLevel;
+
+    @Column(name = "longitude", nullable = false)
     private Double longitude;
+
+    @Column(name = "osm_class")
+    private String osmClass;
+
+    @Column(name = "osm_type_name")
+    private String osmTypeName;
 
     @Column(name = "place_rank")
     private Integer placeRank;

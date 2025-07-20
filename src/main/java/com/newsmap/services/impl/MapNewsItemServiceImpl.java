@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -62,7 +63,7 @@ public class MapNewsItemServiceImpl implements MapNewsItemService {
                 throw new MapNewsItemExistException();
             }
 
-            mapNewsTrackedAreas(mapNewsItemEntity, syncNewsLocationEvent.getGeocodingLocation());
+            mapNewsTrackedAreas(mapNewsItemEntity, syncNewsLocationEvent);
             mapNewsItemEntity.setAddress(syncNewsLocationEvent.getAddress());
             mapNewsItemEntity.setSyncStatus(NewsSyncStatusEnum.SYNCED_GEOCODING_LOCATION.getValue());
             mapNewsItemRepository.save(mapNewsItemEntity);
@@ -87,26 +88,29 @@ public class MapNewsItemServiceImpl implements MapNewsItemService {
         rawEntity.setCategory(newsSourceEntity.getCategory());
     }
 
-    private void mapNewsTrackedAreas(MapNewsItemEntity mapNewsItemEntity, GeocodingLocationEvent locationEvent) {
+    private void mapNewsTrackedAreas(MapNewsItemEntity mapNewsItemEntity, SyncNewsLocationEvent syncNewsLocationEvent) {
+        GeocodingLocationEvent locationEvent = syncNewsLocationEvent.getGeocodingLocation();
+        Set<Long> trackedAreaIds = syncNewsLocationEvent.getTrackedAreaIds();
         GeocodingLocationEntity geocodingLocation =
-                geocodingLocationRepository.findByPlaceId(locationEvent.getPlaceId())
+                geocodingLocationRepository.findByOsmTypeAndOsmId(locationEvent.getOsmType(), locationEvent.getOsmId())
                         .orElseGet(() -> {
                             GeocodingLocationEntity newLocation =
                                     geocodingLocationService.constructEntityFromEvent(locationEvent);
                             return geocodingLocationRepository.save(newLocation);
                         });
-        Set<NewsTrackedAreaEntity> newsTrackedAreaEntities =
-                newsTrackedAreaRepository.findAllByNewsSourceId(mapNewsItemEntity.getNewsSource().getNewsSourceId());
-        for (NewsTrackedAreaEntity trackedAreaEntity : newsTrackedAreaEntities) {
-            if (geocodingLocationService.isLocationInsideLocation(geocodingLocation,
-                                                                  trackedAreaEntity.getGeocodingLocation())) {
-                mapNewsItemEntity.getTrackedAreas().add(trackedAreaEntity);
-            }
-        }
 
-        if (mapNewsItemEntity.getTrackedAreas().isEmpty()) {
+        Set<NewsTrackedAreaEntity> trackedAreas =
+                newsTrackedAreaRepository.findAllByNewsSourceId(mapNewsItemEntity.getNewsSource().getNewsSourceId());
+
+        Set<NewsTrackedAreaEntity> matchedTrackedAreas = trackedAreas.stream()
+                .filter(area -> trackedAreaIds.contains(area.getNewsTrackedAreaId()))
+                .collect(Collectors.toSet());
+
+        if (matchedTrackedAreas.isEmpty()) {
             throw new ResourceNotFoundException("Tracked Areas not found for location");
         }
+
+        mapNewsItemEntity.getTrackedAreas().addAll(matchedTrackedAreas);
         mapNewsItemEntity.setGeocodingLocation(geocodingLocation);
     }
 }

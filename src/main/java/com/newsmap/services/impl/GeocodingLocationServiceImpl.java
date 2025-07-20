@@ -34,7 +34,10 @@ public class GeocodingLocationServiceImpl implements GeocodingLocationService {
         geocodingLocationEntity.setLongitude(locationEvent.getLongitude());
         geocodingLocationEntity.setDisplayName(locationEvent.getDisplayName());
         geocodingLocationEntity.setImportance(locationEvent.getImportance());
-        geocodingLocationEntity.setPlaceId(locationEvent.getPlaceId());
+        geocodingLocationEntity.setOsmType(locationEvent.getOsmType());
+        geocodingLocationEntity.setOsmId(locationEvent.getOsmId());
+        geocodingLocationEntity.setOsmClass(locationEvent.getOsmClass());
+        geocodingLocationEntity.setOsmTypeName(locationEvent.getOsmTypeName());
         geocodingLocationEntity.setPlaceRank(locationEvent.getPlaceRank());
         geocodingLocationEntity.setBoundingBox(locationEvent.getBoundingBox());
         return geocodingLocationEntity;
